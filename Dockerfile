@@ -1,4 +1,4 @@
-FROM node:20-alpine AS build
+FROM node:20-alpine
 RUN corepack enable
 WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
@@ -6,17 +6,8 @@ COPY patches ./patches
 RUN pnpm install --frozen-lockfile
 COPY . .
 RUN pnpm build
-
-FROM node:20-alpine
-RUN corepack enable
-WORKDIR /app
 ENV NODE_ENV=production
 ENV PORT=3000
-COPY package.json pnpm-lock.yaml ./
-COPY patches ./patches
-RUN pnpm install --frozen-lockfile --prod
-COPY --from=build /app/dist ./dist
-COPY drizzle ./drizzle
 EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=30s CMD wget -qO- http://localhost:3000/healthz || exit 1
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s CMD wget -qO- http://localhost:3000/healthz || exit 1
 CMD ["node", "dist/index.js"]
