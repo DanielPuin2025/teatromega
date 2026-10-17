@@ -1,13 +1,28 @@
 FROM node:20-alpine
-RUN corepack enable
+
+# Instalar dependencias del sistema
+RUN apk add --no-cache libc6-compat
+
 WORKDIR /app
-COPY package.json pnpm-lock.yaml ./
-COPY patches ./patches
-RUN pnpm install --frozen-lockfile
+
+# Copiar archivos de dependencias
+COPY package*.json ./
+
+# Instalar dependencias
+RUN npm install --legacy-peer-deps
+
+# Copiar el código fuente
 COPY . .
-RUN pnpm build
+
+# Compilar la aplicación
+RUN npm run build
+
+# Exponer el puerto
+EXPOSE 3000
+
+# Variables de entorno
 ENV NODE_ENV=production
 ENV PORT=3000
-EXPOSE 3000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=40s CMD wget -qO- http://localhost:3000/healthz || exit 1
+
+# Comando para iniciar
 CMD ["node", "dist/index.js"]
