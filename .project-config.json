@@ -1,0 +1,44 @@
+{
+  "build_command": "pnpm run build",
+  "capabilities": [
+    "server",
+    "db",
+    "user"
+  ],
+  "dev_command": "pnpm run dev",
+  "env_vars": {
+    "DATABASE_URL": "mysql://3J5wQRSnUXPHDA7.137022fafa3f:8Syk8ZUz9xbd7y32Wbas@gateway06.us-east-1.prod.aws.tidbcloud.com:4000/48wNjAHBUzXwVuAf5pdcCd?ssl={\"rejectUnauthorized\":true}",
+    "MANUS_WEBDEV_PROJECT_ID": "48wNjAHBUzXwVuAf5pdcCd"
+  },
+  "experiments": [
+    "no_db_push"
+  ],
+  "git_remote": {
+    "repo_url": "https://7f0548f6b28a1758d9bf7be630d36cb4.artifacts.cloudflare.net/git/prod/48wNjAHBUzXwVuAf5pdcCd.git",
+    "expiration": "2026-10-17T17:48:37.849Z",
+    "token": "art_v2_x_629649fba767910b2ac6e7ab7c3b5df0931849d9?expires=1792259317",
+    "backend": "GIT_BACKEND_ARTIFACTS"
+  },
+  "name": "teatro-el-mega-asistencia",
+  "path": "/home/ubuntu/teatro-el-mega-asistencia",
+  "port": 3000,
+  "runtime_endpoints": null,
+  "secrets": {
+    "BUILT_IN_FORGE_API_KEY": "B78WcX4Kx48aGJ5zFzCBQU",
+    "BUILT_IN_FORGE_API_URL": "https://forge.manus.ai",
+    "JWT_SECRET": "QEnW59onMxs9mheM9tELfJ",
+    "OAUTH_SERVER_URL": "https://api.manus.im",
+    "OWNER_NAME": "sebastian Macias",
+    "OWNER_OPEN_ID": "2tQNWVJzRRiDApM6xupicc",
+    "VITE_ANALYTICS_ENDPOINT": "https://manus-analytics.com",
+    "VITE_ANALYTICS_WEBSITE_ID": "1f4f98a3-52b8-4531-9758-87ee8e5eb458",
+    "VITE_APP_ID": "48wNjAHBUzXwVuAf5pdcCd",
+    "VITE_APP_LOGO": "",
+    "VITE_APP_TITLE": "Teatro El Mega — Asistencia",
+    "VITE_FRONTEND_FORGE_API_KEY": "92eqkVfkweTv3rGcdVYGBH",
+    "VITE_FRONTEND_FORGE_API_URL": "https://forge.manus.ai",
+    "VITE_OAUTH_PORTAL_URL": "https://manus.im"
+  },
+  "template_id": "web-db-user",
+  "test_command": "pnpm test"
+}

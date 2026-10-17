@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1792172935010,
+      "tag": "0000_oval_silver_centurion",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1792173099952,
+      "tag": "0001_secret_slipstream",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1792254420271,
+      "tag": "0002_faithful_jack_flag",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1792273590729,
+      "tag": "0003_student_user_link",
+      "breakpoints": true
+    }
+  ]
+}

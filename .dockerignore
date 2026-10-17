@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.git
+.manus
+.manus-logs
+.local-demo-data.json
+*.bak
