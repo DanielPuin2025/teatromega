@@ -149,9 +149,11 @@ function LoginScreen() {
           {showDeveloperInfo && (
             <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 p-4 space-y-3">
               <div className="flex items-center gap-3">
-                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center text-white font-bold text-lg">
-                  SM
-                </div>
+                <img
+                  src="/creador.jpg"
+                  alt="Jhon Sebastian Macías Bohórquez"
+                  className="h-16 w-16 rounded-full border-2 border-white object-cover object-[50%_12%] shadow ring-2 ring-[#11a8d9]"
+                />
                 <div>
                   <p className="font-bold text-slate-800">Jhon Sebastian Macías Bohórquez</p>
                   <p className="text-sm text-slate-500">Desarrollador Full Stack</p>
@@ -627,9 +629,112 @@ function AppShell() {
 
           {tab === "reportes" && !isStudent && (
             <section className="space-y-5">
-              <div>
-                <h2 className="text-xl font-black text-[#102a68]">Reportes y seguimiento</h2>
-                <p className="mt-1 text-sm text-slate-500">Resumen de las sesiones registradas en el sistema.</p>
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <div>
+                  <h2 className="text-xl font-black text-[#102a68]">Reportes y seguimiento</h2>
+                  <p className="mt-1 text-sm text-slate-500">Resumen de las sesiones registradas en el sistema.</p>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => {
+                      const allRecords = sessions.data?.flatMap(s =>
+                        (sessionRecords[s.id] ?? [])
+                          .filter(r => r.status === "late")
+                          .map(r => ({
+                            fecha: s.sessionDate,
+                            actividad: s.activity,
+                            estudiante: r.studentName,
+                            grupo: s.groupName,
+                            estado: "Tardanza"
+                          }))
+                      ) ?? [];
+
+                      const csv = [
+                        ["Fecha", "Actividad", "Estudiante", "Grupo", "Estado"].join(","),
+                        ...allRecords.map(r => [r.fecha, r.actividad, r.estudiante, r.grupo, r.estado].join(","))
+                      ].join("\n");
+
+                      const blob = new Blob([csv], { type: "text/csv" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `reporte-tardanzas-${new Date().toISOString().slice(0,10)}.csv`;
+                      a.click();
+                      toast.success("Reporte descargado en formato Excel");
+                    }}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 hover:bg-emerald-100"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Descargar Excel
+                  </button>
+                  <button
+                    onClick={() => {
+                      const allRecords = sessions.data?.flatMap(s =>
+                        (sessionRecords[s.id] ?? [])
+                          .filter(r => r.status === "late")
+                          .map(r => ({
+                            fecha: s.sessionDate,
+                            actividad: s.activity,
+                            estudiante: r.studentName,
+                            grupo: s.groupName
+                          }))
+                      ) ?? [];
+
+                      const printWindow = window.open('', '_blank');
+                      if (printWindow) {
+                        printWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>Reporte de Tardanzas - Teatro El Mega</title>
+                              <style>
+                                body { font-family: Arial, sans-serif; padding: 20px; }
+                                h1 { color: #102a68; }
+                                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                th { background-color: #0d5cbd; color: white; }
+                              </style>
+                            </head>
+                            <body>
+                              <h1>Reporte de Tardanzas</h1>
+                              <p>Teatro El Mega - Sistema de Asistencia</p>
+                              <p>Fecha: ${new Date().toLocaleDateString()}</p>
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th>Fecha</th>
+                                    <th>Actividad</th>
+                                    <th>Estudiante</th>
+                                    <th>Grupo</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  ${allRecords.map(r => `
+                                    <tr>
+                                      <td>${r.fecha}</td>
+                                      <td>${r.actividad}</td>
+                                      <td>${r.estudiante}</td>
+                                      <td>${r.grupo}</td>
+                                    </tr>
+                                  `).join('')}
+                                </tbody>
+                              </table>
+                              <p style="margin-top: 30px; font-size: 12px; color: #666;">
+                                © 2026 Teatro El Mega - Todos los derechos reservados
+                              </p>
+                            </body>
+                          </html>
+                        `);
+                        printWindow.document.close();
+                        printWindow.print();
+                        toast.success("Reporte PDF generado");
+                      }
+                    }}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 hover:bg-rose-100"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Descargar PDF
+                  </button>
+                </div>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">

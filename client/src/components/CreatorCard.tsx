@@ -1,8 +1,8 @@
 import { useState } from "react";
 
 const PHOTO_PATH = "/creador.jpg";
-
-// Para poner la foto del creador, guarda la imagen como client/public/creador.jpg.
+
+// La foto vive en client/public/creador.jpg.
 export function CreatorCard({ variant = "light" }: { variant?: "light" | "dark" }) {
   const [hasPhoto, setHasPhoto] = useState(true);
   const dark = variant === "dark";
@@ -14,10 +14,10 @@ export function CreatorCard({ variant = "light" }: { variant?: "light" | "dark" 
           src={PHOTO_PATH}
           alt="Jhon Sebastian Macías Bohórquez, creador de la plataforma"
           onError={() => setHasPhoto(false)}
-          className="h-28 w-28 rounded-full border-4 border-white object-cover shadow-lg ring-2 ring-[#11a8d9]"
+          className="h-36 w-36 rounded-full border-4 border-white object-cover object-[50%_12%] shadow-lg ring-2 ring-[#11a8d9]"
         />
       ) : (
-        <div className="flex h-28 w-28 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-500 to-cyan-500 text-3xl font-black text-white shadow-lg ring-2 ring-[#11a8d9]">
+        <div className="flex h-36 w-36 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-blue-500 to-cyan-500 text-4xl font-black text-white shadow-lg ring-2 ring-[#11a8d9]">
           SM
         </div>
       )}
