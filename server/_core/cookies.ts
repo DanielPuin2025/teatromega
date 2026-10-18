@@ -23,7 +23,7 @@ function isSecureRequest(req: Request) {
 
 export function getSessionCookieOptions(
   req: Request
-): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure"> {
+): Pick<CookieOptions, "domain" | "httpOnly" | "path" | "sameSite" | "secure" | "maxAge"> {
   const hostname = req.hostname;
   const isLocal = LOCAL_HOSTS.has(hostname) || isIpAddress(hostname);
   const isSecure = isSecureRequest(req);
@@ -33,5 +33,7 @@ export function getSessionCookieOptions(
     path: "/",
     sameSite: isLocal ? "lax" : (isSecure ? "none" : "lax"),
     secure: isSecure,
+    // NO establecemos maxAge para que sea una cookie de sesión
+    // Se elimina automáticamente cuando se cierra el navegador
   };
 }

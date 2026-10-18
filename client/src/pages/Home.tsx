@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
@@ -636,31 +636,47 @@ function AppShell() {
                 </div>
                 <div className="flex gap-2">
                   <button
-                    onClick={() => {
-                      const allRecords = sessions.data?.flatMap(s =>
-                        (sessionRecords[s.id] ?? [])
-                          .filter(r => r.status === "late")
-                          .map(r => ({
-                            fecha: s.sessionDate,
-                            actividad: s.activity,
-                            estudiante: r.studentName,
-                            grupo: s.groupName,
-                            estado: "Tardanza"
-                          }))
-                      ) ?? [];
+                    onClick={async () => {
+                      try {
+                        const allSessions = sessions.data ?? [];
+                        const allRecords: any[] = [];
 
-                      const csv = [
-                        ["Fecha", "Actividad", "Estudiante", "Grupo", "Estado"].join(","),
-                        ...allRecords.map(r => [r.fecha, r.actividad, r.estudiante, r.grupo, r.estado].join(","))
-                      ].join("\n");
+                        for (const session of allSessions) {
+                          const sessionRecords = await utils.attendance.records.fetch({ sessionId: session.id });
+                          const lateRecords = sessionRecords
+                            .filter((r: any) => r.status === "late")
+                            .map((r: any) => ({
+                              fecha: session.sessionDate,
+                              actividad: session.activity,
+                              estudiante: r.studentName,
+                              grupo: session.groupName,
+                              estado: "Tardanza"
+                            }));
+                          allRecords.push(...lateRecords);
+                        }
 
-                      const blob = new Blob([csv], { type: "text/csv" });
-                      const url = URL.createObjectURL(blob);
-                      const a = document.createElement("a");
-                      a.href = url;
-                      a.download = `reporte-tardanzas-${new Date().toISOString().slice(0,10)}.csv`;
-                      a.click();
-                      toast.success("Reporte descargado en formato Excel");
+                        if (allRecords.length === 0) {
+                          toast.error("No hay registros de tardanzas para descargar");
+                          return;
+                        }
+
+                        const csv = [
+                          ["Fecha", "Actividad", "Estudiante", "Grupo", "Estado"].join(","),
+                          ...allRecords.map(r => [r.fecha, r.actividad, r.estudiante, r.grupo, r.estado].join(","))
+                        ].join("\n");
+
+                        const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = url;
+                        a.download = `reporte-tardanzas-${new Date().toISOString().slice(0,10)}.csv`;
+                        a.click();
+                        URL.revokeObjectURL(url);
+                        toast.success("Reporte descargado en formato Excel");
+                      } catch (error) {
+                        toast.error("Error al generar el reporte");
+                        console.error(error);
+                      }
                     }}
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 hover:bg-emerald-100"
                   >
@@ -668,65 +684,85 @@ function AppShell() {
                     Descargar Excel
                   </button>
                   <button
-                    onClick={() => {
-                      const allRecords = sessions.data?.flatMap(s =>
-                        (sessionRecords[s.id] ?? [])
-                          .filter(r => r.status === "late")
-                          .map(r => ({
-                            fecha: s.sessionDate,
-                            actividad: s.activity,
-                            estudiante: r.studentName,
-                            grupo: s.groupName
-                          }))
-                      ) ?? [];
+                    onClick={async () => {
+                      try {
+                        const allSessions = sessions.data ?? [];
+                        const allRecords: any[] = [];
 
-                      const printWindow = window.open('', '_blank');
-                      if (printWindow) {
-                        printWindow.document.write(`
-                          <html>
-                            <head>
-                              <title>Reporte de Tardanzas - Teatro El Mega</title>
-                              <style>
-                                body { font-family: Arial, sans-serif; padding: 20px; }
-                                h1 { color: #102a68; }
-                                table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                                th { background-color: #0d5cbd; color: white; }
-                              </style>
-                            </head>
-                            <body>
-                              <h1>Reporte de Tardanzas</h1>
-                              <p>Teatro El Mega - Sistema de Asistencia</p>
-                              <p>Fecha: ${new Date().toLocaleDateString()}</p>
-                              <table>
-                                <thead>
-                                  <tr>
-                                    <th>Fecha</th>
-                                    <th>Actividad</th>
-                                    <th>Estudiante</th>
-                                    <th>Grupo</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  ${allRecords.map(r => `
+                        for (const session of allSessions) {
+                          const sessionRecords = await utils.attendance.records.fetch({ sessionId: session.id });
+                          const lateRecords = sessionRecords
+                            .filter((r: any) => r.status === "late")
+                            .map((r: any) => ({
+                              fecha: session.sessionDate,
+                              actividad: session.activity,
+                              estudiante: r.studentName,
+                              grupo: session.groupName
+                            }));
+                          allRecords.push(...lateRecords);
+                        }
+
+                        if (allRecords.length === 0) {
+                          toast.error("No hay registros de tardanzas para imprimir");
+                          return;
+                        }
+
+                        const printWindow = window.open('', '_blank');
+                        if (printWindow) {
+                          printWindow.document.write(`
+                            <html>
+                              <head>
+                                <title>Reporte de Tardanzas - Teatro El Mega</title>
+                                <style>
+                                  body { font-family: Arial, sans-serif; padding: 20px; }
+                                  h1 { color: #102a68; }
+                                  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                                  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                  th { background-color: #0d5cbd; color: white; }
+                                  @media print {
+                                    button { display: none; }
+                                  }
+                                </style>
+                              </head>
+                              <body>
+                                <h1>Reporte de Tardanzas</h1>
+                                <p>Teatro El Mega - Sistema de Asistencia</p>
+                                <p>Fecha: ${new Date().toLocaleDateString()}</p>
+                                <p>Total de tardanzas: ${allRecords.length}</p>
+                                <table>
+                                  <thead>
                                     <tr>
-                                      <td>${r.fecha}</td>
-                                      <td>${r.actividad}</td>
-                                      <td>${r.estudiante}</td>
-                                      <td>${r.grupo}</td>
+                                      <th>Fecha</th>
+                                      <th>Actividad</th>
+                                      <th>Estudiante</th>
+                                      <th>Grupo</th>
                                     </tr>
-                                  `).join('')}
-                                </tbody>
-                              </table>
-                              <p style="margin-top: 30px; font-size: 12px; color: #666;">
-                                © 2026 Teatro El Mega - Todos los derechos reservados
-                              </p>
-                            </body>
-                          </html>
-                        `);
-                        printWindow.document.close();
-                        printWindow.print();
-                        toast.success("Reporte PDF generado");
+                                  </thead>
+                                  <tbody>
+                                    ${allRecords.map(r => `
+                                      <tr>
+                                        <td>${r.fecha}</td>
+                                        <td>${r.actividad}</td>
+                                        <td>${r.estudiante}</td>
+                                        <td>${r.grupo}</td>
+                                      </tr>
+                                    `).join('')}
+                                  </tbody>
+                                </table>
+                                <p style="margin-top: 30px; font-size: 12px; color: #666;">
+                                  © 2026 Teatro El Mega - Todos los derechos reservados<br>
+                                  Desarrollado por Jhon Sebastian Macías Bohórquez
+                                </p>
+                              </body>
+                            </html>
+                          `);
+                          printWindow.document.close();
+                          setTimeout(() => printWindow.print(), 250);
+                          toast.success("Reporte PDF listo para imprimir");
+                        }
+                      } catch (error) {
+                        toast.error("Error al generar el reporte PDF");
+                        console.error(error);
                       }
                     }}
                     className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 hover:bg-rose-100"
@@ -991,7 +1027,20 @@ function SessionModal({
 }
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, loading, logout } = useAuth();
+
+  // Cerrar sesión automáticamente cuando se cierra el navegador
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      logout();
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [logout]);
 
   if (loading)
     return (
