@@ -11,7 +11,7 @@ import { EventsList, MyAttendance } from "@/components/StudentPortal";
 const statusLabels = { present: "Presente", absent: "Ausente", late: "Tardanza", excused: "Excusa" } as const;
 const statusStyles = { present: "bg-emerald-100 text-emerald-700", absent: "bg-rose-100 text-rose-700", late: "bg-amber-100 text-amber-700", excused: "bg-sky-100 text-sky-700" } as const;
 
-type Tab = "resumen" | "estudiantes" | "asistencia" | "reportes" | "usuarios" | "miasistencia" | "eventos";
+type Tab = "resumen" | "estudiantes" | "asistencia" | "reportes" | "usuarios" | "miasistencia" | "eventos" | "calendario";
 type StudentRow = { id: number; fullName: string; document: string | null; grade: string; groupName: string; status: "active" | "inactive" };
 type SessionRow = { id: number; sessionDate: string; activity: string; groupName: string };
 
@@ -290,6 +290,7 @@ function AppShell() {
         { id: "resumen" as Tab, label: "Resumen", icon: BarChart3 },
         { id: "estudiantes" as Tab, label: "Estudiantes", icon: Users },
         { id: "asistencia" as Tab, label: "Eventos y asistencia", icon: CalendarCheck },
+        { id: "calendario" as Tab, label: "Calendario", icon: Calendar },
         { id: "reportes" as Tab, label: "Reportes", icon: FileText },
         ...(isAdmin ? [{ id: "usuarios" as Tab, label: "Usuarios", icon: UserCog }] : []),
       ];
@@ -981,6 +982,20 @@ function AppShell() {
               </div>
             </section>
           )}
+
+          {tab === "calendario" && !isStudent && (
+            <section className="space-y-5">
+              <div>
+                <h2 className="text-xl font-black text-[#102a68]">Calendario de Sesiones</h2>
+                <p className="mt-1 text-sm text-slate-500">Vista mensual de todas las sesiones programadas.</p>
+              </div>
+
+              <CalendarView sessions={sessions.data ?? []} onSessionClick={(sessionId) => {
+                setActiveSessionId(sessionId);
+                setTab("asistencia");
+              }} />
+            </section>
+          )}
         </div>
       </main>
 
@@ -1000,6 +1015,152 @@ function AppShell() {
           loading={createSession.isPending || editSession.isPending}
         />
       )}
+    </div>
+  );
+}
+
+function CalendarView({ sessions, onSessionClick }: { sessions: SessionRow[]; onSessionClick: (id: number) => void }) {
+  const [currentDate, setCurrentDate] = useState(new Date());
+
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+
+  // Obtener primer y último día del mes
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const daysInMonth = lastDay.getDate();
+
+  // Obtener día de la semana del primer día (0 = domingo, 1 = lunes, etc)
+  const startDayOfWeek = firstDay.getDay();
+
+  // Crear array de días del mes
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  // Espacios vacíos al inicio
+  const emptyDays = Array.from({ length: startDayOfWeek }, (_, i) => i);
+
+  // Agrupar sesiones por fecha
+  const sessionsByDate = useMemo(() => {
+    const grouped: Record<string, SessionRow[]> = {};
+    sessions.forEach(session => {
+      const date = session.sessionDate;
+      if (!grouped[date]) grouped[date] = [];
+      grouped[date].push(session);
+    });
+    return grouped;
+  }, [sessions]);
+
+  const goToPreviousMonth = () => {
+    setCurrentDate(new Date(year, month - 1, 1));
+  };
+
+  const goToNextMonth = () => {
+    setCurrentDate(new Date(year, month + 1, 1));
+  };
+
+  const goToToday = () => {
+    setCurrentDate(new Date());
+  };
+
+  const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+  const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
+
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      {/* Header del calendario */}
+      <div className="mb-6 flex items-center justify-between">
+        <h3 className="text-2xl font-black text-[#102a68]">
+          {monthNames[month]} {year}
+        </h3>
+        <div className="flex gap-2">
+          <button
+            onClick={goToToday}
+            className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50"
+          >
+            Hoy
+          </button>
+          <button
+            onClick={goToPreviousMonth}
+            className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            onClick={goToNextMonth}
+            className="rounded-xl border border-slate-200 bg-white p-2 text-slate-700 hover:bg-slate-50"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+
+      {/* Días de la semana */}
+      <div className="mb-2 grid grid-cols-7 gap-2">
+        {dayNames.map(day => (
+          <div key={day} className="py-2 text-center text-xs font-bold uppercase tracking-wider text-slate-400">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      {/* Grid del calendario */}
+      <div className="grid grid-cols-7 gap-2">
+        {/* Días vacíos al inicio */}
+        {emptyDays.map(i => (
+          <div key={`empty-${i}`} className="aspect-square" />
+        ))}
+
+        {/* Días del mes */}
+        {days.map(day => {
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          const daySessions = sessionsByDate[dateStr] || [];
+          const isToday = new Date().toDateString() === new Date(year, month, day).toDateString();
+
+          return (
+            <div
+              key={day}
+              className={`aspect-square rounded-xl border p-2 ${
+                isToday ? 'border-[#0d5cbd] bg-blue-50' : 'border-slate-200 bg-white'
+              } ${daySessions.length > 0 ? 'cursor-pointer hover:bg-slate-50' : ''}`}
+            >
+              <div className="flex h-full flex-col">
+                <span className={`text-sm font-bold ${isToday ? 'text-[#0d5cbd]' : 'text-slate-700'}`}>
+                  {day}
+                </span>
+                <div className="mt-1 flex-1 space-y-1 overflow-y-auto">
+                  {daySessions.slice(0, 3).map(session => (
+                    <button
+                      key={session.id}
+                      onClick={() => onSessionClick(session.id)}
+                      className="w-full truncate rounded-md bg-[#0d5cbd] px-2 py-1 text-left text-xs text-white hover:bg-[#102a68]"
+                      title={`${session.activity} - Grupo ${session.groupName}`}
+                    >
+                      {session.groupName}
+                    </button>
+                  ))}
+                  {daySessions.length > 3 && (
+                    <div className="text-xs font-bold text-slate-500">
+                      +{daySessions.length - 3} más
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Leyenda */}
+      <div className="mt-6 flex items-center gap-4 text-sm text-slate-600">
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded-full bg-[#0d5cbd]"></div>
+          <span>Sesiones programadas</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="h-3 w-3 rounded border-2 border-[#0d5cbd]"></div>
+          <span>Día actual</span>
+        </div>
+      </div>
     </div>
   );
 }
