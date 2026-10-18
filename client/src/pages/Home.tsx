@@ -2,7 +2,7 @@ import { useMemo, useState, useEffect } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { BarChart3, CalendarCheck, Check, ChevronRight, ClipboardList, LogOut, Menu, Pencil, Plus, Search, ShieldCheck, Trash2, UserCog, Users, X, Clock3, FileText, User as UserIcon, Lock, Info } from "lucide-react";
+import { BarChart3, CalendarCheck, Check, ChevronRight, ChevronLeft, ClipboardList, LogOut, Menu, Pencil, Plus, Search, ShieldCheck, Trash2, UserCog, Users, X, Clock3, FileText, User as UserIcon, Lock, Info, Calendar } from "lucide-react";
 import { AppModal } from "@/components/AppModal";
 import { CreatorCard } from "@/components/CreatorCard";
 import { UsersPanel } from "@/components/UsersPanel";
