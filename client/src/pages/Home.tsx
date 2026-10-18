@@ -1278,30 +1278,36 @@ function SessionModal({
   onSubmit: (v: { sessionDate: string; activity: string; groupName: string; studentIds?: number[] }) => void;
   loading: boolean;
 }) {
-  const initialGroup = parseGroup(session?.groupName);
   const [sessionDate, setSessionDate] = useState(session?.sessionDate ?? new Date().toISOString().slice(0, 10));
   const [activity, setActivity] = useState(session?.activity ?? "");
-  const [grade, setGrade] = useState(initialGroup.grade);
-  const [groupName, setGroupName] = useState(initialGroup.group);
+  const [groupName, setGroupName] = useState(session?.groupName ?? "Mixto");
   const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
   const [selectAll, setSelectAll] = useState(true);
+  const [searchStudent, setSearchStudent] = useState("");
 
   const students = trpc.students.list.useQuery();
 
-  // Filtrar estudiantes por el grupo seleccionado
-  const groupStudents = useMemo(() => {
-    const fullGroupName = grade + groupName;
-    return (students.data ?? []).filter(s => s.groupName === fullGroupName && s.status === "active");
-  }, [students.data, grade, groupName]);
+  // Filtrar solo estudiantes activos
+  const activeStudents = useMemo(() => {
+    return (students.data ?? []).filter(s => s.status === "active");
+  }, [students.data]);
 
-  // Cuando cambia el grupo, resetear la selección
+  // Filtrar por búsqueda
+  const filteredStudents = useMemo(() => {
+    if (!searchStudent.trim()) return activeStudents;
+    const search = searchStudent.toLowerCase();
+    return activeStudents.filter(s =>
+      s.fullName.toLowerCase().includes(search) ||
+      s.groupName.toLowerCase().includes(search)
+    );
+  }, [activeStudents, searchStudent]);
+
+  // Inicializar con todos seleccionados
   useEffect(() => {
     if (selectAll) {
-      setSelectedStudents(groupStudents.map(s => s.id));
-    } else {
-      setSelectedStudents([]);
+      setSelectedStudents(activeStudents.map(s => s.id));
     }
-  }, [grade, groupName, selectAll, groupStudents]);
+  }, [selectAll, activeStudents]);
 
   const toggleStudent = (studentId: number) => {
     setSelectAll(false);
@@ -1315,7 +1321,7 @@ function SessionModal({
   const toggleSelectAll = () => {
     setSelectAll(!selectAll);
     if (!selectAll) {
-      setSelectedStudents(groupStudents.map(s => s.id));
+      setSelectedStudents(activeStudents.map(s => s.id));
     } else {
       setSelectedStudents([]);
     }
@@ -1323,14 +1329,13 @@ function SessionModal({
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    const fullGroupName = grade + groupName;
 
     // Si todos están seleccionados, enviar sin studentIds (vincular todos automáticamente)
     // Si no, enviar solo los IDs seleccionados
-    if (selectAll || selectedStudents.length === groupStudents.length) {
-      onSubmit({ sessionDate, activity, groupName: fullGroupName });
+    if (selectAll || selectedStudents.length === activeStudents.length) {
+      onSubmit({ sessionDate, activity, groupName });
     } else {
-      onSubmit({ sessionDate, activity, groupName: fullGroupName, studentIds: selectedStudents });
+      onSubmit({ sessionDate, activity, groupName, studentIds: selectedStudents });
     }
   };
 
@@ -1357,42 +1362,22 @@ function SessionModal({
             className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
           />
         </label>
-        <div className="grid grid-cols-2 gap-3">
-          <label className="text-sm font-semibold text-slate-700">
-            Grado
-            <select
-              value={grade}
-              onChange={(e) => setGrade(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-            >
-              <option value="6">6°</option>
-              <option value="7">7°</option>
-              <option value="8">8°</option>
-              <option value="9">9°</option>
-              <option value="10">10°</option>
-              <option value="11">11°</option>
-            </select>
-          </label>
-          <label className="text-sm font-semibold text-slate-700">
-            Grupo
-            <select
-              value={groupName}
-              onChange={(e) => setGroupName(e.target.value)}
-              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
-            >
-              <option value="A">A</option>
-              <option value="B">B</option>
-              <option value="C">C</option>
-            </select>
-          </label>
-        </div>
+        <label className="block text-sm font-semibold text-slate-700">
+          Grupo/Categoría <span className="font-normal text-slate-400">(informativo)</span>
+          <input
+            value={groupName}
+            onChange={(e) => setGroupName(e.target.value)}
+            className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-100"
+            placeholder="Ej. Mixto, 11A, Teatro General"
+          />
+        </label>
 
         {/* Selección de estudiantes */}
-        {!session && groupStudents.length > 0 && (
+        {!session && activeStudents.length > 0 && (
           <div className="rounded-xl border border-slate-200 p-4">
             <div className="mb-3 flex items-center justify-between">
               <label className="text-sm font-semibold text-slate-700">
-                Estudiantes que asistirán ({selectedStudents.length}/{groupStudents.length})
+                Estudiantes que asistirán ({selectedStudents.length}/{activeStudents.length})
               </label>
               <button
                 type="button"
@@ -1402,8 +1387,20 @@ function SessionModal({
                 {selectAll ? "Deseleccionar todos" : "Seleccionar todos"}
               </button>
             </div>
-            <div className="max-h-60 space-y-2 overflow-y-auto">
-              {groupStudents.map(student => (
+
+            {/* Buscador de estudiantes */}
+            <div className="mb-3">
+              <input
+                type="text"
+                value={searchStudent}
+                onChange={(e) => setSearchStudent(e.target.value)}
+                placeholder="Buscar estudiante por nombre o grupo..."
+                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              />
+            </div>
+
+            <div className="max-h-80 space-y-2 overflow-y-auto">
+              {filteredStudents.map(student => (
                 <label key={student.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-100 p-3 hover:bg-slate-50">
                   <input
                     type="checkbox"
@@ -1411,16 +1408,22 @@ function SessionModal({
                     onChange={() => toggleStudent(student.id)}
                     className="h-4 w-4 rounded border-slate-300 text-[#0d5cbd] focus:ring-2 focus:ring-blue-100"
                   />
-                  <span className="text-sm text-slate-700">{student.fullName}</span>
+                  <div className="flex-1">
+                    <span className="text-sm font-medium text-slate-700">{student.fullName}</span>
+                    <span className="ml-2 text-xs text-slate-500">Grupo {student.groupName}</span>
+                  </div>
                 </label>
               ))}
+              {filteredStudents.length === 0 && (
+                <p className="py-4 text-center text-sm text-slate-500">No se encontraron estudiantes</p>
+              )}
             </div>
           </div>
         )}
 
-        {!session && groupStudents.length === 0 && (
+        {!session && activeStudents.length === 0 && (
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
-            No hay estudiantes activos en el grupo {grade}{groupName}. Agrega estudiantes primero.
+            No hay estudiantes activos. Agrega estudiantes primero.
           </div>
         )}
 
