@@ -22,16 +22,13 @@ function LoginScreen() {
   const utils = trpc.useUtils();
 
   const loginMutation = trpc.auth.login.useMutation({
-    onSuccess: async (data) => {
-      console.log("Login exitoso:", data);
+    onSuccess: async () => {
       toast.success("¡Bienvenido!");
-      // Esperar un momento antes de recargar
-      setTimeout(() => {
-        window.location.href = "/";
-      }, 500);
+      // Invalidar y refrescar la consulta del usuario actual
+      await utils.auth.me.invalidate();
+      // No recargar la página, dejar que React actualice automáticamente
     },
     onError: (error) => {
-      console.error("Error de login:", error);
       toast.error(error.message);
     },
   });
@@ -984,12 +981,6 @@ function AppShell() {
               </div>
             </section>
           )}
-
-          <footer className="mt-12 border-t border-slate-200 pt-8 text-center text-sm text-slate-500">
-            <CreatorCard />
-            <p className="mt-6 font-semibold text-slate-700">© 2026 Teatro El Mega - Sistema de Asistencia</p>
-            <p className="mt-1">Todos los derechos reservados</p>
-          </footer>
         </div>
       </main>
 
