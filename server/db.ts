@@ -310,10 +310,3 @@ export async function getDateRangeReport(startDate: string, endDate: string) {
 
   return results;
 }
-
-export async function deleteStudent(studentId: number) {
-  const db = await requireDb();
-  await db.delete(attendanceRecords).where(eq(attendanceRecords.studentId, studentId));
-  await db.delete(students).where(eq(students.id, studentId));
-  return { success: true };
-}
