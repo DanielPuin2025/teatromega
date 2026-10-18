@@ -124,14 +124,33 @@ export async function getDashboardStats() {
   return { students: Number(studentCount?.count ?? 0), sessions: Number(sessionCount?.count ?? 0), present: Number(presentCount?.count ?? 0), absent: Number(absentCount?.count ?? 0) };
 }
 
-export async function createSession(input: { sessionDate: string; activity: string; groupName: string; createdBy: number }) {
+export async function createSession(input: { sessionDate: string; activity: string; groupName: string; createdBy: number; studentIds?: number[] }) {
   const db = await requireDb();
-  const result = await db.insert(attendanceSessions).values(input);
+  const result = await db.insert(attendanceSessions).values({
+    sessionDate: input.sessionDate,
+    activity: input.activity,
+    groupName: input.groupName,
+    createdBy: input.createdBy,
+  });
   const sessionId = Number(result[0].insertId);
-  const activeStudents = await db.select({ id: students.id }).from(students).where(and(eq(students.status, "active"), eq(students.groupName, input.groupName)));
-  if (activeStudents.length > 0) {
-    await db.insert(attendanceRecords).values(activeStudents.map(student => ({ sessionId, studentId: student.id, status: "absent" as const })));
+
+  // Si se proporcionan IDs de estudiantes específicos, usar esos
+  // Si no, vincular todos los estudiantes activos del grupo
+  let studentsToLink: { id: number }[] = [];
+
+  if (input.studentIds && input.studentIds.length > 0) {
+    // Solo vincular los estudiantes seleccionados
+    studentsToLink = input.studentIds.map(id => ({ id }));
+  } else {
+    // Vincular todos los estudiantes activos del grupo
+    const activeStudents = await db.select({ id: students.id }).from(students).where(and(eq(students.status, "active"), eq(students.groupName, input.groupName)));
+    studentsToLink = activeStudents;
   }
+
+  if (studentsToLink.length > 0) {
+    await db.insert(attendanceRecords).values(studentsToLink.map(student => ({ sessionId, studentId: student.id, status: "absent" as const })));
+  }
+
   const session = await db.select().from(attendanceSessions).where(eq(attendanceSessions.id, sessionId)).limit(1);
   return session[0];
 }

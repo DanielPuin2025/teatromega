@@ -1123,7 +1123,7 @@ function SessionModal({
 }: {
   session: SessionRow | null;
   onClose: () => void;
-  onSubmit: (v: { sessionDate: string; activity: string; groupName: string }) => void;
+  onSubmit: (v: { sessionDate: string; activity: string; groupName: string; studentIds?: number[] }) => void;
   loading: boolean;
 }) {
   const initialGroup = parseGroup(session?.groupName);
@@ -1131,10 +1131,55 @@ function SessionModal({
   const [activity, setActivity] = useState(session?.activity ?? "");
   const [grade, setGrade] = useState(initialGroup.grade);
   const [groupName, setGroupName] = useState(initialGroup.group);
+  const [selectedStudents, setSelectedStudents] = useState<number[]>([]);
+  const [selectAll, setSelectAll] = useState(true);
+
+  const students = trpc.students.list.useQuery();
+
+  // Filtrar estudiantes por el grupo seleccionado
+  const groupStudents = useMemo(() => {
+    const fullGroupName = grade + groupName;
+    return (students.data ?? []).filter(s => s.groupName === fullGroupName && s.status === "active");
+  }, [students.data, grade, groupName]);
+
+  // Cuando cambia el grupo, resetear la selección
+  useEffect(() => {
+    if (selectAll) {
+      setSelectedStudents(groupStudents.map(s => s.id));
+    } else {
+      setSelectedStudents([]);
+    }
+  }, [grade, groupName, selectAll, groupStudents]);
+
+  const toggleStudent = (studentId: number) => {
+    setSelectAll(false);
+    setSelectedStudents(prev =>
+      prev.includes(studentId)
+        ? prev.filter(id => id !== studentId)
+        : [...prev, studentId]
+    );
+  };
+
+  const toggleSelectAll = () => {
+    setSelectAll(!selectAll);
+    if (!selectAll) {
+      setSelectedStudents(groupStudents.map(s => s.id));
+    } else {
+      setSelectedStudents([]);
+    }
+  };
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ sessionDate, activity, groupName: grade + groupName });
+    const fullGroupName = grade + groupName;
+
+    // Si todos están seleccionados, enviar sin studentIds (vincular todos automáticamente)
+    // Si no, enviar solo los IDs seleccionados
+    if (selectAll || selectedStudents.length === groupStudents.length) {
+      onSubmit({ sessionDate, activity, groupName: fullGroupName });
+    } else {
+      onSubmit({ sessionDate, activity, groupName: fullGroupName, studentIds: selectedStudents });
+    }
   };
 
   return (
@@ -1189,7 +1234,48 @@ function SessionModal({
             </select>
           </label>
         </div>
-        <button disabled={loading} className="mt-2 w-full rounded-xl bg-[#0d5cbd] px-4 py-3 font-bold text-white hover:bg-[#102a68] disabled:opacity-60">
+
+        {/* Selección de estudiantes */}
+        {!session && groupStudents.length > 0 && (
+          <div className="rounded-xl border border-slate-200 p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <label className="text-sm font-semibold text-slate-700">
+                Estudiantes que asistirán ({selectedStudents.length}/{groupStudents.length})
+              </label>
+              <button
+                type="button"
+                onClick={toggleSelectAll}
+                className="text-sm font-bold text-[#0d5cbd] hover:underline"
+              >
+                {selectAll ? "Deseleccionar todos" : "Seleccionar todos"}
+              </button>
+            </div>
+            <div className="max-h-60 space-y-2 overflow-y-auto">
+              {groupStudents.map(student => (
+                <label key={student.id} className="flex cursor-pointer items-center gap-3 rounded-lg border border-slate-100 p-3 hover:bg-slate-50">
+                  <input
+                    type="checkbox"
+                    checked={selectedStudents.includes(student.id)}
+                    onChange={() => toggleStudent(student.id)}
+                    className="h-4 w-4 rounded border-slate-300 text-[#0d5cbd] focus:ring-2 focus:ring-blue-100"
+                  />
+                  <span className="text-sm text-slate-700">{student.fullName}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!session && groupStudents.length === 0 && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+            No hay estudiantes activos en el grupo {grade}{groupName}. Agrega estudiantes primero.
+          </div>
+        )}
+
+        <button
+          disabled={loading || (!session && selectedStudents.length === 0)}
+          className="mt-2 w-full rounded-xl bg-[#0d5cbd] px-4 py-3 font-bold text-white hover:bg-[#102a68] disabled:opacity-60"
+        >
           {loading ? "Creando..." : "Crear sesión"}
         </button>
       </form>

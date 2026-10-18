@@ -48,6 +48,7 @@ const sessionInput = z.object({
   sessionDate: z.string().min(10),
   activity: z.string().min(3),
   groupName: z.string().min(1),
+  studentIds: z.array(z.number()).optional(),
 });
 
 // Solo administradores: gestión completa (CRUD) de usuarios y de todo el sistema.
