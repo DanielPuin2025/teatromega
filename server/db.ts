@@ -161,3 +161,137 @@ export async function deleteStudent(studentId: number) {
   await db.delete(students).where(eq(students.id, studentId));
   return { success: true };
 }
+
+// Nuevas funciones para reportes completos
+export async function getFullAttendanceReport() {
+  const db = await requireDb();
+  const allStudents = await db.select().from(students).where(eq(students.status, "active")).orderBy(students.groupName, students.fullName);
+
+  const results = await Promise.all(allStudents.map(async (student) => {
+    const records = await db.select({ status: attendanceRecords.status })
+      .from(attendanceRecords)
+      .where(eq(attendanceRecords.studentId, student.id));
+
+    const totalSessions = records.length;
+    const present = records.filter(r => r.status === "present").length;
+    const absent = records.filter(r => r.status === "absent").length;
+    const late = records.filter(r => r.status === "late").length;
+    const excused = records.filter(r => r.status === "excused").length;
+    const attendanceRate = totalSessions > 0 ? Math.round((present / totalSessions) * 100) : 0;
+
+    return {
+      studentId: student.id,
+      fullName: student.fullName,
+      document: student.document,
+      groupName: student.groupName,
+      grade: student.grade,
+      totalSessions,
+      present,
+      absent,
+      late,
+      excused,
+      attendanceRate
+    };
+  }));
+
+  return results;
+}
+
+export async function getStudentDetailedReport(studentId: number) {
+  const db = await requireDb();
+  const [student] = await db.select().from(students).where(eq(students.id, studentId)).limit(1);
+
+  if (!student) return null;
+
+  const records = await db.select({
+    sessionId: attendanceSessions.id,
+    sessionDate: attendanceSessions.sessionDate,
+    activity: attendanceSessions.activity,
+    status: attendanceRecords.status,
+    note: attendanceRecords.note,
+  }).from(attendanceRecords)
+    .innerJoin(attendanceSessions, eq(attendanceRecords.sessionId, attendanceSessions.id))
+    .where(eq(attendanceRecords.studentId, studentId))
+    .orderBy(desc(attendanceSessions.sessionDate));
+
+  const totalSessions = records.length;
+  const present = records.filter(r => r.status === "present").length;
+  const absent = records.filter(r => r.status === "absent").length;
+  const late = records.filter(r => r.status === "late").length;
+  const excused = records.filter(r => r.status === "excused").length;
+  const attendanceRate = totalSessions > 0 ? Math.round((present / totalSessions) * 100) : 0;
+
+  return {
+    student,
+    records,
+    stats: { totalSessions, present, absent, late, excused, attendanceRate }
+  };
+}
+
+export async function getGroupReport(groupName: string) {
+  const db = await requireDb();
+  const groupStudents = await db.select().from(students)
+    .where(and(eq(students.groupName, groupName), eq(students.status, "active")))
+    .orderBy(students.fullName);
+
+  const results = await Promise.all(groupStudents.map(async (student) => {
+    const records = await db.select({ status: attendanceRecords.status })
+      .from(attendanceRecords)
+      .where(eq(attendanceRecords.studentId, student.id));
+
+    const totalSessions = records.length;
+    const present = records.filter(r => r.status === "present").length;
+    const attendanceRate = totalSessions > 0 ? Math.round((present / totalSessions) * 100) : 0;
+
+    return {
+      fullName: student.fullName,
+      document: student.document,
+      totalSessions,
+      present,
+      absent: records.filter(r => r.status === "absent").length,
+      late: records.filter(r => r.status === "late").length,
+      excused: records.filter(r => r.status === "excused").length,
+      attendanceRate
+    };
+  }));
+
+  return { groupName, students: results };
+}
+
+export async function getDateRangeReport(startDate: string, endDate: string) {
+  const db = await requireDb();
+  const sessions = await db.select()
+    .from(attendanceSessions)
+    .where(and(
+      sql`${attendanceSessions.sessionDate} >= ${startDate}`,
+      sql`${attendanceSessions.sessionDate} <= ${endDate}`
+    ))
+    .orderBy(desc(attendanceSessions.sessionDate));
+
+  const results = await Promise.all(sessions.map(async (session) => {
+    const records = await db.select({
+      studentName: students.fullName,
+      status: attendanceRecords.status,
+    }).from(attendanceRecords)
+      .innerJoin(students, eq(attendanceRecords.studentId, students.id))
+      .where(eq(attendanceRecords.sessionId, session.id));
+
+    return {
+      sessionId: session.id,
+      sessionDate: session.sessionDate,
+      activity: session.activity,
+      groupName: session.groupName,
+      present: records.filter(r => r.status === "present").length,
+      absent: records.filter(r => r.status === "absent").length,
+      late: records.filter(r => r.status === "late").length,
+      excused: records.filter(r => r.status === "excused").length,
+      total: records.length
+    };
+  }));
+
+  return results;
+}
+  await db.delete(attendanceRecords).where(eq(attendanceRecords.studentId, studentId));
+  await db.delete(students).where(eq(students.id, studentId));
+  return { success: true };
+}

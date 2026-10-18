@@ -19,6 +19,10 @@ import {
   updateAttendance,
   updateSession,
   updateStudent,
+  getFullAttendanceReport,
+  getStudentDetailedReport,
+  getGroupReport,
+  getDateRangeReport,
 } from "./db";
 import { authenticateUser, createUser, listUsers, updateUser, deleteUser } from "./auth";
 import { TRPCError } from "@trpc/server";
@@ -154,6 +158,12 @@ export const appRouter = router({
     updateSession: staffProcedure.input(sessionInput.extend({ id: z.number() })).mutation(({ input }) => updateSession(input)),
     deleteSession: staffProcedure.input(z.object({ id: z.number() })).mutation(({ input }) => deleteSession(input.id)),
     updateRecord: staffProcedure.input(z.object({ recordId: z.number(), status: z.enum(["present", "absent", "late", "excused"]), note: z.string().optional() })).mutation(({ input }) => updateAttendance(input)),
+  }),
+  reports: router({
+    full: staffProcedure.query(() => getFullAttendanceReport()),
+    student: staffProcedure.input(z.object({ studentId: z.number() })).query(({ input }) => getStudentDetailedReport(input.studentId)),
+    group: staffProcedure.input(z.object({ groupName: z.string() })).query(({ input }) => getGroupReport(input.groupName)),
+    dateRange: staffProcedure.input(z.object({ startDate: z.string(), endDate: z.string() })).query(({ input }) => getDateRangeReport(input.startDate, input.endDate)),
   }),
 });
 

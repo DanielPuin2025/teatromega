@@ -629,148 +629,319 @@ function AppShell() {
 
           {tab === "reportes" && !isStudent && (
             <section className="space-y-5">
-              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-                <div>
-                  <h2 className="text-xl font-black text-[#102a68]">Reportes y seguimiento</h2>
-                  <p className="mt-1 text-sm text-slate-500">Resumen de las sesiones registradas en el sistema.</p>
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={async () => {
-                      try {
-                        const allSessions = sessions.data ?? [];
-                        const allRecords: any[] = [];
+              <div>
+                <h2 className="text-xl font-black text-[#102a68]">Reportes y seguimiento</h2>
+                <p className="mt-1 text-sm text-slate-500">Descarga reportes completos de asistencia.</p>
+              </div>
 
-                        for (const session of allSessions) {
-                          const sessionRecords = await utils.attendance.records.fetch({ sessionId: session.id });
-                          const lateRecords = sessionRecords
-                            .filter((r: any) => r.status === "late")
-                            .map((r: any) => ({
-                              fecha: session.sessionDate,
-                              actividad: session.activity,
-                              estudiante: r.studentName,
-                              grupo: session.groupName,
-                              estado: "Tardanza"
-                            }));
-                          allRecords.push(...lateRecords);
-                        }
+              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {/* Reporte General Completo */}
+                <button
+                  onClick={async () => {
+                    try {
+                      const report = await utils.reports.full.fetch();
 
-                        if (allRecords.length === 0) {
-                          toast.error("No hay registros de tardanzas para descargar");
-                          return;
-                        }
-
-                        const csv = [
-                          ["Fecha", "Actividad", "Estudiante", "Grupo", "Estado"].join(","),
-                          ...allRecords.map(r => [r.fecha, r.actividad, r.estudiante, r.grupo, r.estado].join(","))
-                        ].join("\n");
-
-                        const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = `reporte-tardanzas-${new Date().toISOString().slice(0,10)}.csv`;
-                        a.click();
-                        URL.revokeObjectURL(url);
-                        toast.success("Reporte descargado en formato Excel");
-                      } catch (error) {
-                        toast.error("Error al generar el reporte");
-                        console.error(error);
+                      if (report.length === 0) {
+                        toast.error("No hay datos para generar el reporte");
+                        return;
                       }
-                    }}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700 hover:bg-emerald-100"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Descargar Excel
-                  </button>
-                  <button
-                    onClick={async () => {
-                      try {
-                        const allSessions = sessions.data ?? [];
-                        const allRecords: any[] = [];
 
-                        for (const session of allSessions) {
-                          const sessionRecords = await utils.attendance.records.fetch({ sessionId: session.id });
-                          const lateRecords = sessionRecords
-                            .filter((r: any) => r.status === "late")
-                            .map((r: any) => ({
-                              fecha: session.sessionDate,
-                              actividad: session.activity,
-                              estudiante: r.studentName,
-                              grupo: session.groupName
-                            }));
-                          allRecords.push(...lateRecords);
-                        }
+                      const csv = [
+                        ["Estudiante", "Documento", "Grupo", "Grado", "Total Sesiones", "Presentes", "Ausentes", "Tardanzas", "Excusas", "% Asistencia"].join(","),
+                        ...report.map(r => [
+                          r.fullName,
+                          r.document || "N/A",
+                          r.groupName,
+                          r.grade,
+                          r.totalSessions,
+                          r.present,
+                          r.absent,
+                          r.late,
+                          r.excused,
+                          r.attendanceRate + "%"
+                        ].join(","))
+                      ].join("\n");
 
-                        if (allRecords.length === 0) {
-                          toast.error("No hay registros de tardanzas para imprimir");
-                          return;
-                        }
+                      const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `reporte-general-completo-${new Date().toISOString().slice(0,10)}.csv`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast.success("Reporte general descargado");
+                    } catch (error) {
+                      toast.error("Error al generar el reporte");
+                      console.error(error);
+                    }
+                  }}
+                  className="flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:border-blue-300 hover:shadow-md"
+                >
+                  <div className="rounded-xl bg-blue-50 p-3">
+                    <FileText className="h-6 w-6 text-[#0d5cbd]" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800">Reporte General Completo</h3>
+                    <p className="mt-1 text-sm text-slate-500">Todos los estudiantes con estadísticas completas</p>
+                  </div>
+                </button>
 
-                        const printWindow = window.open('', '_blank');
-                        if (printWindow) {
-                          printWindow.document.write(`
-                            <html>
-                              <head>
-                                <title>Reporte de Tardanzas - Teatro El Mega</title>
-                                <style>
-                                  body { font-family: Arial, sans-serif; padding: 20px; }
-                                  h1 { color: #102a68; }
-                                  table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-                                  th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-                                  th { background-color: #0d5cbd; color: white; }
-                                  @media print {
-                                    button { display: none; }
-                                  }
-                                </style>
-                              </head>
-                              <body>
-                                <h1>Reporte de Tardanzas</h1>
-                                <p>Teatro El Mega - Sistema de Asistencia</p>
-                                <p>Fecha: ${new Date().toLocaleDateString()}</p>
-                                <p>Total de tardanzas: ${allRecords.length}</p>
-                                <table>
-                                  <thead>
-                                    <tr>
-                                      <th>Fecha</th>
-                                      <th>Actividad</th>
-                                      <th>Estudiante</th>
-                                      <th>Grupo</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    ${allRecords.map(r => `
-                                      <tr>
-                                        <td>${r.fecha}</td>
-                                        <td>${r.actividad}</td>
-                                        <td>${r.estudiante}</td>
-                                        <td>${r.grupo}</td>
+                {/* Reporte de Tardanzas */}
+                <button
+                  onClick={async () => {
+                    try {
+                      const allSessions = sessions.data ?? [];
+                      const allRecords: any[] = [];
+
+                      for (const session of allSessions) {
+                        const sessionRecords = await utils.attendance.records.fetch({ sessionId: session.id });
+                        const lateRecords = sessionRecords
+                          .filter((r: any) => r.status === "late")
+                          .map((r: any) => ({
+                            fecha: session.sessionDate,
+                            actividad: session.activity,
+                            estudiante: r.fullName,
+                            grupo: session.groupName,
+                          }));
+                        allRecords.push(...lateRecords);
+                      }
+
+                      if (allRecords.length === 0) {
+                        toast.error("No hay registros de tardanzas");
+                        return;
+                      }
+
+                      const csv = [
+                        ["Fecha", "Actividad", "Estudiante", "Grupo"].join(","),
+                        ...allRecords.map(r => [r.fecha, r.actividad, r.estudiante, r.grupo].join(","))
+                      ].join("\n");
+
+                      const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `reporte-tardanzas-${new Date().toISOString().slice(0,10)}.csv`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast.success("Reporte de tardanzas descargado");
+                    } catch (error) {
+                      toast.error("Error al generar el reporte");
+                      console.error(error);
+                    }
+                  }}
+                  className="flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:border-amber-300 hover:shadow-md"
+                >
+                  <div className="rounded-xl bg-amber-50 p-3">
+                    <Clock3 className="h-6 w-6 text-amber-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800">Reporte de Tardanzas</h3>
+                    <p className="mt-1 text-sm text-slate-500">Estudiantes que han llegado tarde</p>
+                  </div>
+                </button>
+
+                {/* Reporte de Ausencias */}
+                <button
+                  onClick={async () => {
+                    try {
+                      const allSessions = sessions.data ?? [];
+                      const allRecords: any[] = [];
+
+                      for (const session of allSessions) {
+                        const sessionRecords = await utils.attendance.records.fetch({ sessionId: session.id });
+                        const absentRecords = sessionRecords
+                          .filter((r: any) => r.status === "absent")
+                          .map((r: any) => ({
+                            fecha: session.sessionDate,
+                            actividad: session.activity,
+                            estudiante: r.fullName,
+                            grupo: session.groupName,
+                          }));
+                        allRecords.push(...absentRecords);
+                      }
+
+                      if (allRecords.length === 0) {
+                        toast.error("No hay registros de ausencias");
+                        return;
+                      }
+
+                      const csv = [
+                        ["Fecha", "Actividad", "Estudiante", "Grupo"].join(","),
+                        ...allRecords.map(r => [r.fecha, r.actividad, r.estudiante, r.grupo].join(","))
+                      ].join("\n");
+
+                      const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `reporte-ausencias-${new Date().toISOString().slice(0,10)}.csv`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast.success("Reporte de ausencias descargado");
+                    } catch (error) {
+                      toast.error("Error al generar el reporte");
+                      console.error(error);
+                    }
+                  }}
+                  className="flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:border-rose-300 hover:shadow-md"
+                >
+                  <div className="rounded-xl bg-rose-50 p-3">
+                    <X className="h-6 w-6 text-rose-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800">Reporte de Ausencias</h3>
+                    <p className="mt-1 text-sm text-slate-500">Estudiantes que han faltado</p>
+                  </div>
+                </button>
+
+                {/* Reporte de Excusas */}
+                <button
+                  onClick={async () => {
+                    try {
+                      const allSessions = sessions.data ?? [];
+                      const allRecords: any[] = [];
+
+                      for (const session of allSessions) {
+                        const sessionRecords = await utils.attendance.records.fetch({ sessionId: session.id });
+                        const excusedRecords = sessionRecords
+                          .filter((r: any) => r.status === "excused")
+                          .map((r: any) => ({
+                            fecha: session.sessionDate,
+                            actividad: session.activity,
+                            estudiante: r.fullName,
+                            grupo: session.groupName,
+                            nota: r.note || "Sin nota"
+                          }));
+                        allRecords.push(...excusedRecords);
+                      }
+
+                      if (allRecords.length === 0) {
+                        toast.error("No hay registros de excusas");
+                        return;
+                      }
+
+                      const csv = [
+                        ["Fecha", "Actividad", "Estudiante", "Grupo", "Nota"].join(","),
+                        ...allRecords.map(r => [r.fecha, r.actividad, r.estudiante, r.grupo, r.nota].join(","))
+                      ].join("\n");
+
+                      const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = `reporte-excusas-${new Date().toISOString().slice(0,10)}.csv`;
+                      a.click();
+                      URL.revokeObjectURL(url);
+                      toast.success("Reporte de excusas descargado");
+                    } catch (error) {
+                      toast.error("Error al generar el reporte");
+                      console.error(error);
+                    }
+                  }}
+                  className="flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:border-sky-300 hover:shadow-md"
+                >
+                  <div className="rounded-xl bg-sky-50 p-3">
+                    <Info className="h-6 w-6 text-sky-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800">Reporte de Excusas</h3>
+                    <p className="mt-1 text-sm text-slate-500">Estudiantes con justificación</p>
+                  </div>
+                </button>
+
+                {/* Imprimir Todo (PDF) */}
+                <button
+                  onClick={async () => {
+                    try {
+                      const report = await utils.reports.full.fetch();
+
+                      if (report.length === 0) {
+                        toast.error("No hay datos para imprimir");
+                        return;
+                      }
+
+                      const printWindow = window.open('', '_blank');
+                      if (printWindow) {
+                        printWindow.document.write(`
+                          <html>
+                            <head>
+                              <title>Reporte Completo - Teatro El Mega</title>
+                              <style>
+                                body { font-family: Arial, sans-serif; padding: 20px; }
+                                h1 { color: #102a68; }
+                                table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+                                th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+                                th { background-color: #0d5cbd; color: white; }
+                                .good { background-color: #d1fae5; }
+                                .warning { background-color: #fef3c7; }
+                                .bad { background-color: #fee2e2; }
+                                @media print { button { display: none; } }
+                              </style>
+                            </head>
+                            <body>
+                              <h1>Reporte Completo de Asistencia</h1>
+                              <p><strong>Teatro El Mega - Sistema de Asistencia</strong></p>
+                              <p>Fecha: ${new Date().toLocaleDateString()}</p>
+                              <p>Total de estudiantes: ${report.length}</p>
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th>Estudiante</th>
+                                    <th>Documento</th>
+                                    <th>Grupo</th>
+                                    <th>Sesiones</th>
+                                    <th>Presentes</th>
+                                    <th>Ausentes</th>
+                                    <th>Tardanzas</th>
+                                    <th>Excusas</th>
+                                    <th>% Asistencia</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  ${report.map(r => {
+                                    const rowClass = r.attendanceRate >= 80 ? 'good' : r.attendanceRate >= 60 ? 'warning' : 'bad';
+                                    return `
+                                      <tr class="${rowClass}">
+                                        <td>${r.fullName}</td>
+                                        <td>${r.document || 'N/A'}</td>
+                                        <td>${r.groupName}</td>
+                                        <td>${r.totalSessions}</td>
+                                        <td>${r.present}</td>
+                                        <td>${r.absent}</td>
+                                        <td>${r.late}</td>
+                                        <td>${r.excused}</td>
+                                        <td><strong>${r.attendanceRate}%</strong></td>
                                       </tr>
-                                    `).join('')}
-                                  </tbody>
-                                </table>
-                                <p style="margin-top: 30px; font-size: 12px; color: #666;">
-                                  © 2026 Teatro El Mega - Todos los derechos reservados<br>
-                                  Desarrollado por Jhon Sebastian Macías Bohórquez
-                                </p>
-                              </body>
-                            </html>
-                          `);
-                          printWindow.document.close();
-                          setTimeout(() => printWindow.print(), 250);
-                          toast.success("Reporte PDF listo para imprimir");
-                        }
-                      } catch (error) {
-                        toast.error("Error al generar el reporte PDF");
-                        console.error(error);
+                                    `;
+                                  }).join('')}
+                                </tbody>
+                              </table>
+                              <p style="margin-top: 30px; font-size: 12px; color: #666;">
+                                © 2026 Teatro El Mega - Todos los derechos reservados<br>
+                                Desarrollado por Jhon Sebastian Macías Bohórquez
+                              </p>
+                            </body>
+                          </html>
+                        `);
+                        printWindow.document.close();
+                        setTimeout(() => printWindow.print(), 250);
+                        toast.success("Reporte PDF listo para imprimir");
                       }
-                    }}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-700 hover:bg-rose-100"
-                  >
-                    <FileText className="h-4 w-4" />
-                    Descargar PDF
-                  </button>
-                </div>
+                    } catch (error) {
+                      toast.error("Error al generar el PDF");
+                      console.error(error);
+                    }
+                  }}
+                  className="flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-gradient-to-br from-purple-50 to-pink-50 p-6 text-left shadow-sm transition hover:border-purple-300 hover:shadow-md"
+                >
+                  <div className="rounded-xl bg-purple-100 p-3">
+                    <FileText className="h-6 w-6 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-slate-800">Imprimir Todo (PDF)</h3>
+                    <p className="mt-1 text-sm text-slate-500">Reporte completo con colores por rendimiento</p>
+                  </div>
+                </button>
               </div>
 
               <div className="grid gap-4 sm:grid-cols-3">
